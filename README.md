@@ -1,4 +1,4 @@
-# trustay
+# Trustay
 
 A new Flutter project.
 
