@@ -15,7 +15,6 @@ build/
 .sts4-cache
 bin/
 !**/src/main/**/bin/
-src/main/resources/application.yaml
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
@@ -25,6 +24,7 @@ src/main/resources/application.yaml
 *.ipr
 out/
 !**/src/main/**/out/
+src/main/resources/application.yaml
 !**/src/test/**/out/
 
 ### NetBeans ###
@@ -36,3 +36,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+/back/trustay/build/
+*.jar
+*.war
+*.class
+.gradle/
+
