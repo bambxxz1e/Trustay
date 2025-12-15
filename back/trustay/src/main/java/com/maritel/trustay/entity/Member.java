@@ -3,35 +3,38 @@ package com.maritel.trustay.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.*;
-
 @Entity
 @Table(name = "TBL_MEMBER")
 @Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column(name = "member_id")
     private Long id;
 
-    @Column(name = "email", updatable = false, length = 100, nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "name", length = 25, nullable = false)
-    private String name;
-
-    @Column(name = "passwd", length = 50, nullable = false)
+    @Column(nullable = false, length = 100) // 암호화된 비밀번호 길이 고려
     private String passwd;
 
-    @Column(name = "birth", updatable = false, length = 25, nullable = false)
-    private String birth;
+    @Column(nullable = false, length = 25)
+    private String name;
 
-    @Column(name = "phone",  length = 25, nullable = false)
-    private String phone;
+    @OneToOne(mappedBy = "member", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Profile profile;
 
+    @Builder
+    public Member(String email, String passwd, String name) {
+        this.email = email;
+        this.passwd = passwd;
+        this.name = name;
+    }
+
+    // 이름 변경 편의 메서드
+    public void updateName(String name) {
+        this.name = name;
+    }
 }

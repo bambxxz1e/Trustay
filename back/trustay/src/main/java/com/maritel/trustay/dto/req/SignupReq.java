@@ -45,7 +45,7 @@ public class SignupReq {
             regexp = "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
             message = "생년월일 형식은 yyyy-mm-dd입니다."
     )
-    private String brith;
+    private String birth;
 
     @NotBlank(message = "전화번호는 필수 입력 값입니다.")
     @Pattern(
@@ -53,15 +53,4 @@ public class SignupReq {
             message = "전화번호 혈식은 000-0000-0000입니다."
     )
     private String phone;
-
-
-    public Member toEntity() {
-        return Member.builder()
-                .name(this.name)
-                .email(this.email)
-                .passwd(this.passwd)
-                .birth(this.brith)
-                .phone(this.phone)
-                .build();
-    }
 }

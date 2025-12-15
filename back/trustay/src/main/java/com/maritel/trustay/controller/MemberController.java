@@ -1,59 +1,46 @@
 package com.maritel.trustay.controller;
 
+import com.maritel.trustay.dto.req.LoginReq;
 import com.maritel.trustay.dto.req.SignupReq;
 import com.maritel.trustay.dto.res.DataResponse;
+import com.maritel.trustay.dto.res.ProfileRes;
 import com.maritel.trustay.dto.res.ResponseCode;
 import com.maritel.trustay.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/trustay/members")
+@RequiredArgsConstructor
 @Slf4j
 public class MemberController {
 
     private final MemberService memberService;
 
-    public MemberController(MemberService memberService) {
-        this.memberService = memberService;
-    }
-
     @Operation(summary = "회원가입")
     @PostMapping("/signup")
-    public ResponseEntity<DataResponse<?>> signup(@Valid @RequestBody SignupReq requestDto) {
-        log.info(">>>> Signup request: {}", requestDto.toString());
+    public ResponseEntity<DataResponse<Void>> signup(@Valid @RequestBody SignupReq requestDto) {
         try {
-            boolean result = false;
-            result = memberService.signup(requestDto);
-            Map<String, Boolean> res = new HashMap<>();
-            res.put("success", result);
-            return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, res));
+            memberService.signup(requestDto);
+            return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS));
         } catch (IllegalStateException e) {
-            return ResponseEntity.ok(DataResponse.of(ResponseCode.ALREADY_EXIST_USER_EMAIL, e.getMessage()));
+            return ResponseEntity.ok(DataResponse.of(ResponseCode.ALREADY_EXIST_USER_EMAIL, null));
         }
     }
 
-//    @PostMapping("/profile")
-//    public ResponseEntity<DataResponse<MemberInfoRes>> profile(@Parameter(hidden = true) Authentication authentication,
-//                                                               HttpServletRequest request) {
-//
-////        Authentication authentication = SecurityContextHolder.getContext().getAuthentication(); //또 다른 방법
-//        if (authentication == null) {
-//            throw new IllegalStateException("Authentication object is null");
-//        }
-//
-//        String id = authentication.getName();
-//        MemberInfoRes res = memberService.findByUserId(id);
-//        return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, res));
-//    }
-
+    @Operation(summary = "로그인")
+    @PostMapping("/login")
+    public ResponseEntity<DataResponse<Long>> login(@RequestBody LoginReq loginReq) {
+        try {
+            Long memberId = memberService.login(loginReq);
+            // 실제로는 여기서 JWT 토큰 등을 헤더나 바디에 담아줘야 합니다.
+            return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, memberId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(DataResponse.of(400, e.getMessage()));
+        }
+    }
 }

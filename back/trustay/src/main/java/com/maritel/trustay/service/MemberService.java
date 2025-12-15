@@ -1,141 +1,109 @@
 package com.maritel.trustay.service;
 
+import com.maritel.trustay.dto.req.LoginReq;
 import com.maritel.trustay.dto.req.SignupReq;
+import com.maritel.trustay.dto.res.ProfileRes;
 import com.maritel.trustay.entity.Member;
+import com.maritel.trustay.entity.Profile;
 import com.maritel.trustay.repository.MemberRepository;
-import jakarta.transaction.Transactional;
+import com.maritel.trustay.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
-@Slf4j
+@Transactional(readOnly = true)
 public class MemberService {
-    //add to repository static variables;
-    private final MemberRepository memberRepository;
 
+    private final MemberRepository memberRepository;
+    private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
-//    /**
-//     * 회원정보 조회
-//     * @param email
-//     * @return
-//     */
-//    public MemberInfoRes findByUserId(String email) {
-//        Optional<Member> memberOptional = memberRepository.findByEmail(email);
-//        return memberOptional
-//                .map(member -> MemberInfoRes.builder()
-//                        .id(member.getId())
-//                        .email(member.getEmail())
-//                        .name(member.getName())
-//                        .build())
-//                .orElseThrow(() -> new NoSuchElementException("해당 이메일의 사용자를 찾을 수 없습니다."));
-//    }
-
-
     /**
-     * 회원가입
-     * @param dto
-     * @return
+     * 1. 회원가입
      */
-    // MemberService.java의 signup 수정
-    public boolean signup(SignupReq dto) {
-        Optional<Member> memberOptional = memberRepository.findByEmail(dto.getEmail());
-        if (memberOptional.isPresent()) {
+    @Transactional
+    public void signup(SignupReq dto) {
+        // 이메일 중복 검사
+        if (memberRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalStateException("이미 존재하는 이메일입니다.");
         }
 
-        String encodedPassword = passwordEncoder.encode(dto.getPasswd());
-
+        // 1. Member 엔티티 생성 (이름, 이메일, 비번)
         Member member = Member.builder()
                 .email(dto.getEmail())
+                .passwd(passwordEncoder.encode(dto.getPasswd()))
                 .name(dto.getName())
-                .passwd(encodedPassword)
                 .build();
 
+        // 2. Member 저장 (이때 id가 생성됨)
         memberRepository.save(member);
-        return true;
+
+        // 3. Profile 엔티티 생성 (생년월일, 전화번호, Member 연결)
+        Profile profile = Profile.builder()
+                .member(member)        // FK 설정
+                .birth(dto.getBirth()) // DTO의 birth 사용
+                .phone(dto.getPhone()) // DTO의 phone 사용
+                .build();
+
+        // 4. Profile 저장
+        profileRepository.save(profile);
     }
-
-//    public Optional<MemberProfileRequestDto> profile(String email) {
-//        return memberRepository.findByEmail(email)
-//                .map(MemberProfileRequestDto::UserDto);
-//    }
-
 
     /**
-     * 회원아이디(이메일)로 Member Entity 리턴
-     * @param email
-     * @return
+     * 2. 로그인
      */
-    public Member getMemberByEmail(String email) {
-        return memberRepository.findByEmail(email).orElseThrow();
+    public Long login(LoginReq dto) {
+        Member member = memberRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
+
+        if (!passwordEncoder.matches(dto.getPasswd(), member.getPasswd())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        return member.getId();
     }
 
-//    public PatchProfileRes patchProfile(String email, PatchProfileReqDto dto) {
-//        Optional<Member> optionalMember = memberRepository.findByEmail(email);
-//
-//        // 회원이 없을 경우 false 리턴
-//        if (optionalMember.isEmpty()) {
-//            return PatchProfileRes.builder()
-//                    .success(false)
-//                    .build();
-//        }
-//
-//        // 이메일로 회원 조회
-//        Member member = optionalMember.get();
-//
-//        // 이름이 없을 경우 false 리턴
-//        if (dto.getName() == null || dto.getName().isBlank()) {
-//        return PatchProfileRes.builder()
-//                .success(false)
-//                .build();
-//
-//        }
-//
-//        member.setName(dto.getName());
-//
-//        // dto에 있는 값을 확인하여 member 업데이트
-//        if (dto.getProfileImage() != null) {
-//            member.setProfileImage(dto.getProfileImage());
-//        }
-//
-//        if (dto.getCoverColor() != null) {
-//            member.setCoverColor(dto.getCoverColor());
-//        }
-//
-//        if (dto.getQuoteTitle() != null) {
-//            member.setQuoteTitle(dto.getQuoteTitle());
-//        }
-//
-//        if (dto.getQuoteText() != null) {
-//            member.setQuoteText(dto.getQuoteText());
-//        }
-//
-//        // 음악 정보는 중첩 객체이므로 이중 확인
-//        if (dto.getMusic() != null) {
-//            MusicReqDto musicDto = dto.getMusic();
-//            Music music = new Music();
-//
-//            if (musicDto.getId() != null) music.setId(musicDto.getId());
-//            if (musicDto.getSong() != null) music.setSong(musicDto.getSong());
-//            if (musicDto.getArtist() != null) music.setArtist(musicDto.getArtist());
-//
-//            member.setMusic(music);
-//        }
-//
-//        // 수정된 프로필 정보 저장
-//        memberRepository.save(member);
-//
-//        // 성공시 true 리턴
-//        return PatchProfileRes.builder()
-//                .success(true)
-//                .build();
-//    }
+    /**
+     * 3. 프로필 조회 (변경 없음, 다만 ProfileRes 내부 구현 확인 필요)
+     */
+    public ProfileRes getProfile(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
+        // ProfileRes.from(member) 안에서 member.getProfile().getPhone() 등을 호출해야 함
+        return ProfileRes.from(member);
+    }
+
+    /**
+     * 4. 프로필 수정
+     */
+    @Transactional
+    public void updateProfile(Long memberId, ProfileUpdateReq dto) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
+
+        // 1. Member 정보 수정 (이름)
+        if (dto.getName() != null) {
+            member.updateName(dto.getName());
+        }
+
+        // 2. Profile 정보 수정 (전화번호, 생년월일)
+        Profile profile = member.getProfile();
+
+        if (profile != null) {
+            // 이미 프로필이 있으면 업데이트
+            profile.updateProfile(dto.getPhone(), dto.getBirth());
+        } else {
+            // 방어 코드: 혹시 프로필이 없다면 새로 생성
+            Profile newProfile = Profile.builder()
+                    .member(member)
+                    .phone(dto.getPhone())
+                    .birth(dto.getBirth())
+                    .build();
+            profileRepository.save(newProfile);
+        }
+    }
 }
