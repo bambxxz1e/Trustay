@@ -63,6 +63,7 @@ class _SignupPageState extends State<SignupPage> {
                 validator: (value) => value!.isEmpty ? '전화번호를 입력하세요' : null,
               ),
               TextFormField(
+                // 중복 이메일 체크 필요
                 decoration: const InputDecoration(labelText: '이메일'),
                 onSaved: (value) => email = value!,
                 validator: (value) =>

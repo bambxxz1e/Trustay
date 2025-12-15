@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/login.dart';
 import 'screens/signup.dart';
 
 void main() {
@@ -11,9 +12,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Signup Demo',
+      title: 'Login Demo',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const SignupPage(), // screens/signup_page.dart 연결
+
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/signup': (context) => const SignupPage(),
+      },
     );
   }
 }
