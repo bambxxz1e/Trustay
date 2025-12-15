@@ -2,6 +2,7 @@ package com.maritel.trustay.service;
 
 import com.maritel.trustay.dto.req.LoginReq;
 import com.maritel.trustay.dto.req.SignupReq;
+import com.maritel.trustay.dto.req.ProfileUpdateReq;
 import com.maritel.trustay.dto.res.ProfileRes;
 import com.maritel.trustay.entity.Member;
 import com.maritel.trustay.entity.Profile;
