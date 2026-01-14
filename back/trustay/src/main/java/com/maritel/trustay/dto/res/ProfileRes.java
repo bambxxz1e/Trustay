@@ -1,22 +1,40 @@
 package com.maritel.trustay.dto.res;
+
+import com.maritel.trustay.constant.Role;
 import com.maritel.trustay.entity.Member;
+import com.maritel.trustay.entity.Profile;
 import lombok.*;
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ProfileRes {
+
+    private Long memberId;
     private String email;
     private String name;
+
+    // Profile 정보
     private String birth;
     private String phone;
+    private Role role;
+    private String accountInfo;
+    private String profileImageUrl;
 
     public static ProfileRes from(Member member) {
+        Profile profile = member.getProfile();
+
         return ProfileRes.builder()
+                .memberId(member.getId())
                 .email(member.getEmail())
                 .name(member.getName())
-                // Profile이 없을 경우 null 안전 처리
-                .birth(member.getProfile() != null ? member.getProfile().getBirth() : null)
-                .phone(member.getProfile() != null ? member.getProfile().getPhone() : null)
+                .birth(profile != null ? profile.getBirth() : null)
+                .phone(profile != null ? profile.getPhone() : null)
+                .role(profile != null ? profile.getRole() : null)
+                .accountInfo(profile != null ? profile.getAccountInfo() : null)
+                .profileImageUrl(profile != null ? profile.getProfileImageUrl() : null)
                 .build();
     }
 }

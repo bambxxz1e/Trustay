@@ -3,62 +3,37 @@ package com.maritel.trustay.service;
 import com.maritel.trustay.dto.req.LoginReq;
 import com.maritel.trustay.entity.Member;
 import com.maritel.trustay.repository.MemberRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import com.maritel.trustay.util.JwtUtil; // JwtUtil 추가
+import lombok.RequiredArgsConstructor; // 생성자 주입 간소화
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.security.Key;
-import java.util.Date;
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuthService {
+
     private final MemberRepository memberRepository;
-    //private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil; // JwtUtil 주입 받기
 
-    // JWT SECRET KEY (32바이트 이상)
-    @Value("${secret_key}")
-    private String SECRET_KEY;
-
-    public AuthService(MemberRepository memberRepository, PasswordEncoder passwordEncoder) {
-        this.memberRepository = memberRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    // 🔹 JWT 서명 키 생성
-    private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-
+    @Transactional
     public String login(LoginReq req) {
-        Optional<Member> memberOptional = memberRepository.findByEmail(req.getEmail());
-        if (memberOptional.isEmpty()) {
-            throw new RuntimeException("User not found");
-        }
+        // 1. 회원 조회
+        Member member = memberRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Member member = memberOptional.get();
-        log.info("member: {}", member.getName());
+        log.info("Try login member: {}", member.getName());
 
-        //비밀번호 검증
+        // 2. 비밀번호 검증
         if (!passwordEncoder.matches(req.getPasswd(), member.getPasswd())) {
             throw new RuntimeException("Invalid Password");
         }
 
-
-        return Jwts.builder()
-                .setSubject(member.getEmail())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24시간 유효
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+        // 3. 토큰 생성 (JwtUtil 사용으로 중복 코드 제거)
+        return jwtUtil.generateToken(member.getEmail());
     }
-
 }

@@ -23,46 +23,53 @@ import java.util.UUID;
 @Slf4j
 public class FileService {
 
-
     @Value("${pkg.imgLocation}")
-    String imageStoragePath;
+    private String imageStoragePath;
 
+    @Value("${pkg.server.host}")
+    private String serverHost;
+
+    @Value("${pkg.server.port}")
+    private String serverPort;
+
+    @Value("${pkg.file.prefix}")
+    private String filePrefix;
 
     public String uploadFile(MultipartFile file) throws MalformedURLException, BadRequestException {
         if (file == null) {
-            throw new BadRequestException();
+            throw new BadRequestException("파일이 제공되지 않았습니다.");
         }
 
-        String fileExt = FileUtils.extension(file.getContentType());    // 확장자 추출
-
-        //TODO: - 프로필 확장자 체크 필요 (jpg, jpeg, png만 허용)
+        String fileExt = FileUtils.extension(file.getContentType());
 
         log.debug("** fileUpload originalFileName = {} **", file.getOriginalFilename());
+
         if (fileExt.equals(".jpg") || fileExt.equals(".jpeg") || fileExt.equals(".png")) {
-            String originalFileName = file.getOriginalFilename();
-            String fileName = this.getNewFileName(FileUtils.extension(file.getContentType()));
+            String fileName = this.getNewFileName(fileExt);
             String url = this.uploadLocal(fileName, file);
             log.info(">>>>  fileUpload fileurl {}**", url);
             return url;
         } else {
+            log.warn("지원하지 않는 파일 형식: {}", fileExt);
             return null;
         }
     }
 
-
     private String uploadLocal(String filename, MultipartFile file) throws MalformedURLException {
-        String rootPath = imageStoragePath;
         LocalDate nowDate = LocalDate.now();
-        String datePath = String.format("%04d", nowDate.getYear()) + "/"
-                + String.format("%02d", nowDate.getMonth().getValue()) + "/"
-                + String.format("%02d", nowDate.getDayOfMonth());
+        String datePath = String.format("%04d/%02d/%02d",
+                nowDate.getYear(),
+                nowDate.getMonth().getValue(),
+                nowDate.getDayOfMonth());
 
-        FileUtils.hasDirectoryAndMkDir(imageStoragePath+ "/" + datePath);
+        String fullPath = imageStoragePath + "/" + datePath;
+        FileUtils.hasDirectoryAndMkDir(fullPath);
+
         try {
-            File dir = new File(rootPath + "/" + datePath);
+            File dir = new File(fullPath);
             if (!dir.exists()) {
                 boolean mkdir = dir.mkdirs();
-                log.debug(" make file success {}" ,mkdir);
+                log.debug("디렉토리 생성 성공: {}", mkdir);
             }
 
             FileOutputStream fileOutputStream = new FileOutputStream(new File(dir, filename));
@@ -71,12 +78,13 @@ public class FileService {
             stream.close();
 
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getLocalizedMessage());
+            log.error("파일 업로드 중 오류 발생", e);
+            throw new RuntimeException("파일 업로드 실패: " + e.getLocalizedMessage());
         }
 
-        // File.separator 사용하면 안된다. url 전용 "/" 사용
-        String uploadedURLPath = "http://3.38.185.232:8080/images/" + datePath + "/" + filename;
+        // URL 생성 (File.separator 대신 "/" 사용)
+        String uploadedURLPath = String.format("http://%s:%s/images/%s/%s",
+                serverHost, serverPort, datePath, filename);
         return uploadedURLPath;
     }
 
@@ -85,10 +93,11 @@ public class FileService {
         String randomStr = UUID.randomUUID().toString().replace("-", "");
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         String formatTime = LocalDateTime.now().format(dateTimeFormatter);
-        File file = new File("/home/ubuntu/project/fileUpload/2025/06/10/Miven_d5cc287db9964c5ebcdf89ae1fdee037_20250610_001934_.png");
-        log.info(">>>> test = {}", file.exists()); // true 나와야 정상
-        log.info(">>>> test = {}", file.canRead());
-        log.info("** fileUpload fileName = {} **", "Miven" + "_" + randomStr + "_" + formatTime + "_" + fileExt);
-        return "Miven" + "_" + randomStr + "_" + formatTime + "_" + fileExt; // Miven_(random)_20220101_094530_jpg
+
+        String newFileName = String.format("%s_%s_%s%s",
+                filePrefix, randomStr, formatTime, fileExt);
+
+        log.debug("생성된 파일명: {}", newFileName);
+        return newFileName;
     }
 }

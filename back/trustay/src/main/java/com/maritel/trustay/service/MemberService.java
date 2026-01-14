@@ -1,6 +1,5 @@
 package com.maritel.trustay.service;
 
-import com.maritel.trustay.dto.req.LoginReq;
 import com.maritel.trustay.dto.req.SignupReq;
 import com.maritel.trustay.dto.req.ProfileUpdateReq;
 import com.maritel.trustay.dto.res.ProfileRes;
@@ -9,10 +8,13 @@ import com.maritel.trustay.entity.Profile;
 import com.maritel.trustay.repository.MemberRepository;
 import com.maritel.trustay.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -21,90 +23,107 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final FileService fileService;
 
     /**
-     * 1. 회원가입
+     * 1. 회원가입 (이름, 이메일, 비밀번호만)
      */
     @Transactional
     public void signup(SignupReq dto) {
-        // 이메일 중복 검사
         if (memberRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalStateException("이미 존재하는 이메일입니다.");
         }
 
-        // 1. Member 엔티티 생성 (이름, 이메일, 비번)
         Member member = Member.builder()
                 .email(dto.getEmail())
                 .passwd(passwordEncoder.encode(dto.getPasswd()))
                 .name(dto.getName())
                 .build();
 
-        // 2. Member 저장 (이때 id가 생성됨)
         memberRepository.save(member);
 
-        // 3. Profile 엔티티 생성 (생년월일, 전화번호, Member 연결)
+        // 프로필 초기 생성 (비어있는 상태로)
         Profile profile = Profile.builder()
-                .member(member)        // FK 설정
-                .birth(dto.getBirth()) // DTO의 birth 사용
-                .phone(dto.getPhone()) // DTO의 phone 사용
+                .member(member)
                 .build();
 
-        // 4. Profile 저장
         profileRepository.save(profile);
     }
 
     /**
-     * 2. 로그인
+     * 2. 프로필 조회
      */
-    public Long login(LoginReq dto) {
-        Member member = memberRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
-
-        if (!passwordEncoder.matches(dto.getPasswd(), member.getPasswd())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-        }
-
-        return member.getId();
-    }
-
-    /**
-     * 3. 프로필 조회 (변경 없음, 다만 ProfileRes 내부 구현 확인 필요)
-     */
-    public ProfileRes getProfile(Long memberId) {
-        Member member = memberRepository.findById(memberId)
+    public ProfileRes getProfile(String email) {
+        Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
-        // ProfileRes.from(member) 안에서 member.getProfile().getPhone() 등을 호출해야 함
         return ProfileRes.from(member);
     }
 
     /**
-     * 4. 프로필 수정
+     * 3-1. 프로필 정보 수정 (전화번호, 생일, 계좌)
      */
     @Transactional
-    public void updateProfile(Long memberId, ProfileUpdateReq dto) {
-        Member member = memberRepository.findById(memberId)
+    public void updateProfileInfo(String email, ProfileUpdateReq dto) {
+        Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
-        // 1. Member 정보 수정 (이름)
-        if (dto.getName() != null) {
-            member.updateName(dto.getName());
-        }
-
-        // 2. Profile 정보 수정 (전화번호, 생년월일)
         Profile profile = member.getProfile();
 
-        if (profile != null) {
-            // 이미 프로필이 있으면 업데이트
-            profile.updateProfile(dto.getPhone(), dto.getBirth());
-        } else {
-            // 방어 코드: 혹시 프로필이 없다면 새로 생성
-            Profile newProfile = Profile.builder()
+        if (profile == null) {
+            // 방어 코드: 프로필이 없는 경우 새로 생성
+            profile = Profile.builder()
                     .member(member)
-                    .phone(dto.getPhone())
-                    .birth(dto.getBirth())
                     .build();
-            profileRepository.save(newProfile);
+            profileRepository.save(profile);
+        }
+
+        // 전화번호, 생일 수정
+        if (dto.getPhone() != null || dto.getBirth() != null) {
+            profile.updateProfile(dto.getPhone(), dto.getBirth());
+        }
+
+        // 계좌 정보 수정
+        if (dto.getAccountInfo() != null) {
+            profile.updateAccountInfo(dto.getAccountInfo());
+        }
+
+        log.info("프로필 정보 수정 완료: {}", email);
+    }
+
+    /**
+     * 3-2. 프로필 이미지 업로드
+     */
+    @Transactional
+    public void updateProfileImage(String email, MultipartFile profileImage) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
+
+        Profile profile = member.getProfile();
+
+        if (profile == null) {
+            // 방어 코드: 프로필이 없는 경우 새로 생성
+            profile = Profile.builder()
+                    .member(member)
+                    .build();
+            profileRepository.save(profile);
+        }
+
+        // 프로필 이미지 업로드 처리
+        if (profileImage == null || profileImage.isEmpty()) {
+            throw new IllegalArgumentException("프로필 이미지가 제공되지 않았습니다.");
+        }
+
+        try {
+            String uploadedUrl = fileService.uploadFile(profileImage);
+            if (uploadedUrl == null) {
+                throw new RuntimeException("지원하지 않는 파일 형식입니다. (jpg, jpeg, png만 가능)");
+            }
+            profile.updateProfileImage(uploadedUrl);
+            log.info("프로필 이미지 업로드 완료: {}", uploadedUrl);
+        } catch (Exception e) {
+            log.error("프로필 이미지 업로드 실패", e);
+            throw new RuntimeException("프로필 이미지 업로드에 실패했습니다: " + e.getMessage());
         }
     }
 }

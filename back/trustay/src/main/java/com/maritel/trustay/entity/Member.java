@@ -17,7 +17,7 @@ public class Member extends BaseEntity {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = false, length = 100) // 암호화된 비밀번호 길이 고려
+    @Column(nullable = false, length = 100)
     private String passwd;
 
     @Column(nullable = false, length = 25)
@@ -33,7 +33,6 @@ public class Member extends BaseEntity {
         this.name = name;
     }
 
-    // 이름 변경 편의 메서드
     public void updateName(String name) {
         this.name = name;
     }

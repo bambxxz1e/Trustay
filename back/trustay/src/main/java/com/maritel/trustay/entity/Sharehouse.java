@@ -1,0 +1,96 @@
+package com.maritel.trustay.entity;
+
+import com.maritel.trustay.constant.ApprovalStatus;
+import com.maritel.trustay.constant.HouseType;
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "TBL_SHAREHOUSE")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Sharehouse extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "house_id")
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "host_id") // 집주인 Member ID
+    private Member host;
+
+    // --- 기본 정보 ---
+    @Column(nullable = false, length = 100)
+    private String title;
+
+    @Lob // 대용량 텍스트
+    private String description;
+
+    @Column(nullable = false)
+    private String address;
+
+    // --- 위치 정보 ---
+    private Double latitude;  // 위도
+    private Double longitude; // 경도
+
+    // --- 매물 상세 정보 ---
+    @Enumerated(EnumType.STRING)
+    private HouseType houseType; // APARTMENT, HOUSE, UNIT...
+
+    private Integer rentPrice; // 렌트비
+    private Integer deposit;   // 보증금
+
+    private Integer roomCount;
+    private Integer bathroomCount;
+    private Integer currentResidents; // 현재 거주 인원
+
+    // 옵션 (JSON 문자열 또는 콤마 구분)
+    @Column(columnDefinition = "TEXT")
+    private String options;
+
+    // --- 관리 정보 ---
+    @Enumerated(EnumType.STRING)
+    private ApprovalStatus approvalStatus; // WAITING, APPROVED, REJECTED
+
+    @Builder
+    public Sharehouse(Member host, String title, String description, String address,
+                      Double latitude, Double longitude,
+                      HouseType houseType, Integer rentPrice, Integer deposit,
+                      Integer roomCount, Integer bathroomCount, Integer currentResidents,
+                      String options, ApprovalStatus approvalStatus) {
+        this.host = host;
+        this.title = title;
+        this.description = description;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.houseType = houseType;
+        this.rentPrice = rentPrice;
+        this.deposit = deposit;
+        this.roomCount = roomCount;
+        this.bathroomCount = bathroomCount;
+        this.currentResidents = currentResidents;
+        this.options = options;
+        this.approvalStatus = approvalStatus;
+    }
+
+    public void updateSharehouse(String title, String description, Integer rentPrice,
+                                 Integer deposit, String options, Integer roomCount,
+                                 Integer bathroomCount, Integer currentResidents, HouseType houseType) {
+        this.title = title;
+        this.description = description;
+        this.rentPrice = rentPrice;
+        this.deposit = deposit;
+        this.options = options;
+        this.roomCount = roomCount;
+        this.bathroomCount = bathroomCount;
+        this.currentResidents = currentResidents;
+        this.houseType = houseType;
+    }
+
+    // --- 승인 상태 변경 메서드 ---
+    public void changeApprovalStatus(ApprovalStatus status) {
+        this.approvalStatus = status;
+    }
+}
