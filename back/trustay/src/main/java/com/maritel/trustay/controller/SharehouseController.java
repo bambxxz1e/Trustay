@@ -2,16 +2,21 @@ package com.maritel.trustay.controller;
 
 import com.maritel.trustay.constant.ApprovalStatus;
 import com.maritel.trustay.dto.req.SharehouseReq;
+import com.maritel.trustay.dto.req.SharehouseSearchReq;
 import com.maritel.trustay.dto.req.SharehouseUpdateReq;
-import com.maritel.trustay.dto.res.DataResponse;
-import com.maritel.trustay.dto.res.ResponseCode;
-import com.maritel.trustay.dto.res.SharehouseRes;
+import com.maritel.trustay.dto.res.*;
 import com.maritel.trustay.service.SharehouseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+// [중요] 여기 Import가 잘못되어 있었습니다. 아래 것으로 바꿔야 합니다.
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,12 +35,10 @@ public class SharehouseController {
     @PostMapping
     public ResponseEntity<DataResponse<SharehouseRes>> registerSharehouse(
             Principal principal,
-            @Valid @RequestBody SharehouseReq requestDto) {
+            @Valid @RequestBody SharehouseReq req) {
 
-        // Principal 객체에서 로그인한 사용자의 이메일 추출 (JwtFilter를 통과했으므로 null이 아님)
-        String email = principal.getName();
-
-        SharehouseRes response = sharehouseService.registerSharehouse(email, requestDto);
+        String userEmail = principal.getName();
+        SharehouseRes response = sharehouseService.registerSharehouse(userEmail, req);
 
         return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, response));
     }
@@ -47,9 +50,7 @@ public class SharehouseController {
             @RequestBody SharehouseUpdateReq req,
             Principal principal) {
 
-        // Principal에서 이메일 추출 (로그인한 사용자)
         String email = principal.getName();
-
         sharehouseService.updateSharehouse(houseId, email, req);
         return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS));
     }
@@ -61,7 +62,6 @@ public class SharehouseController {
             Principal principal) {
 
         String email = principal.getName();
-
         sharehouseService.deleteSharehouse(houseId, email);
         return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS));
     }
@@ -70,10 +70,40 @@ public class SharehouseController {
     @PatchMapping("/{houseId}/approval")
     public ResponseEntity<DataResponse<Void>> approveSharehouse(
             @PathVariable Long houseId,
-            @RequestParam ApprovalStatus status) {
+            @RequestParam ApprovalStatus status,
+            Principal principal) { // Principal 추가
 
-        // 실제 운영 환경에서는 여기서 관리자 권한(Role) 체크가 필요합니다.
-        sharehouseService.approveSharehouse(houseId, status);
+        // 로그인한 사용자(관리자 추정)의 이메일 추출
+        String email = principal.getName();
+        log.info(email);
+
+        // 서비스에 이메일 전달하여 권한 체크 및 승인 수행
+        sharehouseService.approveSharehouse(houseId, status, email);
+
         return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS));
+    }
+
+    // --- [수정된 부분: 상세 조회 & 목록 조회] ---
+
+    @Operation(summary = "쉐어하우스 상세 조회", description = "매물 상세 정보를 조회합니다. (조회수 1 증가)")
+    @GetMapping("/{houseId}")
+    public ResponseEntity<DataResponse<SharehouseResultRes>> getSharehouseDetail(@PathVariable Long houseId) {
+        SharehouseResultRes response = sharehouseService.getSharehouseDetail(houseId);
+        return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, response));
+    }
+
+    @Operation(summary = "쉐어하우스 목록 조회")
+    @GetMapping
+    public ResponseEntity<DataResponse<PageResponse<SharehouseResultRes>>> getSharehouseList(
+            @ModelAttribute SharehouseSearchReq req,
+            @PageableDefault(size = 10, sort = "viewCount", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        // 1. 서비스에서 Page 객체를 받아옴
+        Page<SharehouseResultRes> resultPage = sharehouseService.getSharehouseList(req, pageable);
+
+        // 2. 우리가 만든 깔끔한 PageResponse로 변환!
+        PageResponse<SharehouseResultRes> response = new PageResponse<>(resultPage);
+
+        return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, response));
     }
 }

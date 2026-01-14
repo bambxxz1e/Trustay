@@ -18,6 +18,7 @@ public class SharehouseResultRes {
     private Integer roomCount;
     private Integer bathroomCount;
     private String options;
+    private Integer viewCount;
     private String hostName; // 집주인 이름 표시
 
     // Entity -> DTO 변환 메서드
@@ -33,6 +34,7 @@ public class SharehouseResultRes {
                 .roomCount(sharehouse.getRoomCount())
                 .bathroomCount(sharehouse.getBathroomCount())
                 .options(sharehouse.getOptions())
+                .viewCount(sharehouse.getViewCount())
                 .hostName(sharehouse.getHost().getName())
                 .build();
     }

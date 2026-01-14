@@ -4,6 +4,7 @@ import com.maritel.trustay.constant.ApprovalStatus;
 import com.maritel.trustay.constant.HouseType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "TBL_SHAREHOUSE")
@@ -29,6 +30,10 @@ public class Sharehouse extends BaseEntity {
 
     @Column(nullable = false)
     private String address;
+
+    @Column(nullable = false)
+    @ColumnDefault("0") // DB 생성 시 기본값 0
+    private Integer viewCount = 0;
 
     // --- 위치 정보 ---
     private Double latitude;  // 위도
@@ -73,6 +78,7 @@ public class Sharehouse extends BaseEntity {
         this.currentResidents = currentResidents;
         this.options = options;
         this.approvalStatus = approvalStatus;
+        this.viewCount = 0;
     }
 
     public void updateSharehouse(String title, String description, Integer rentPrice,

@@ -4,6 +4,9 @@ import com.maritel.trustay.constant.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Table(name = "TBL_PROFILE")
 @Getter
@@ -25,10 +28,18 @@ public class Profile {
     @Column(length = 25)
     private String phone;
 
+    @Column(length = 25)
+    private String gender;
+
+    @Column(length = 255)
+    private String address;
+
     // --- Member에서 이동된 필드 ---
+    @ElementCollection(targetClass = Role.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "TBL_PROFILE_ROLES", joinColumns = @JoinColumn(name = "member_id"))
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private Role role; // HOST(집주인), TENANT(세입자), ADMIN(관리자)
+    @Column(name = "role") // 테이블 내 컬럼명
+    private Set<Role> roles = new HashSet<>();
 
     @Column(length = 50)
     private String accountInfo; // 정산용 계좌 정보
@@ -38,11 +49,11 @@ public class Profile {
     private String profileImageUrl; // 프로필 사진 URL
 
     @Builder
-    public Profile(Member member, String birth, String phone, Role role, String accountInfo, String profileImageUrl) {
+    public Profile(Member member, String birth, String phone, Set<Role> roles, String accountInfo, String profileImageUrl) {
         this.member = member;
         this.birth = birth;
         this.phone = phone;
-        this.role = role;
+        this.roles = roles != null ? roles : new HashSet<>(); // null 방지
         this.accountInfo = accountInfo;
         this.profileImageUrl = profileImageUrl;
     }
@@ -60,7 +71,7 @@ public class Profile {
         this.profileImageUrl = profileImageUrl;
     }
 
-    public void updateRole(Role role) {
-        this.role = role;
+    public void addRole(Role role) {
+        this.roles.add(role);
     }
 }

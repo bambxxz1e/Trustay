@@ -5,6 +5,8 @@ import com.maritel.trustay.entity.Member;
 import com.maritel.trustay.entity.Profile;
 import lombok.*;
 
+import java.util.Set;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,7 +21,7 @@ public class ProfileRes {
     // Profile 정보
     private String birth;
     private String phone;
-    private Role role;
+    private Set<Role> roles;
     private String accountInfo;
     private String profileImageUrl;
 
@@ -32,7 +34,7 @@ public class ProfileRes {
                 .name(member.getName())
                 .birth(profile != null ? profile.getBirth() : null)
                 .phone(profile != null ? profile.getPhone() : null)
-                .role(profile != null ? profile.getRole() : null)
+                .roles(profile != null ? profile.getRoles() : null)
                 .accountInfo(profile != null ? profile.getAccountInfo() : null)
                 .profileImageUrl(profile != null ? profile.getProfileImageUrl() : null)
                 .build();

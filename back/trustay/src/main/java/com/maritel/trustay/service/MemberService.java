@@ -1,5 +1,6 @@
 package com.maritel.trustay.service;
 
+import com.maritel.trustay.constant.Role;
 import com.maritel.trustay.dto.req.SignupReq;
 import com.maritel.trustay.dto.req.ProfileUpdateReq;
 import com.maritel.trustay.dto.res.ProfileRes;
@@ -13,6 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -30,10 +34,12 @@ public class MemberService {
      */
     @Transactional
     public void signup(SignupReq dto) {
+        // 1. 이메일 중복 검사
         if (memberRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalStateException("이미 존재하는 이메일입니다.");
         }
 
+        // 2. Member 저장
         Member member = Member.builder()
                 .email(dto.getEmail())
                 .passwd(passwordEncoder.encode(dto.getPasswd()))
@@ -42,9 +48,13 @@ public class MemberService {
 
         memberRepository.save(member);
 
-        // 프로필 초기 생성 (비어있는 상태로)
+        // 3. Profile 자동 생성 (기본 권한: TENANT)
+        Set<Role> roles = new HashSet<>();
+        roles.add(Role.TENANT); // 기본은 세입자
+
         Profile profile = Profile.builder()
                 .member(member)
+                .roles(roles) // Set 전달
                 .build();
 
         profileRepository.save(profile);
