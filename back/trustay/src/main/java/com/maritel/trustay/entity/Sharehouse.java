@@ -54,6 +54,10 @@ public class Sharehouse extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String options;
 
+    // 이미지 URL들 (콤마로 구분하여 저장)
+    @Column(columnDefinition = "TEXT")
+    private String imageUrls;
+
     // --- 관리 정보 ---
     @Enumerated(EnumType.STRING)
     private ApprovalStatus approvalStatus; // WAITING, APPROVED, REJECTED
@@ -63,7 +67,7 @@ public class Sharehouse extends BaseEntity {
                       Double latitude, Double longitude,
                       HouseType houseType, Integer rentPrice, Integer deposit,
                       Integer roomCount, Integer bathroomCount, Integer currentResidents,
-                      String options, ApprovalStatus approvalStatus) {
+                      String options, String imageUrls, ApprovalStatus approvalStatus) {
         this.host = host;
         this.title = title;
         this.description = description;
@@ -77,6 +81,7 @@ public class Sharehouse extends BaseEntity {
         this.bathroomCount = bathroomCount;
         this.currentResidents = currentResidents;
         this.options = options;
+        this.imageUrls = imageUrls;
         this.approvalStatus = approvalStatus;
         this.viewCount = 0;
     }

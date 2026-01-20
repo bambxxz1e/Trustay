@@ -16,6 +16,8 @@ import java.net.MalformedURLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -53,6 +55,22 @@ public class FileService {
             log.warn("지원하지 않는 파일 형식: {}", fileExt);
             return null;
         }
+    }
+
+    public List<String> uploadFiles(List<MultipartFile> files) throws MalformedURLException, BadRequestException {
+        if (files == null || files.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> urls = new ArrayList<>();
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) continue;
+            String url = uploadFile(file);
+            if (url != null && !url.isBlank()) {
+                urls.add(url);
+            }
+        }
+        return urls;
     }
 
     private String uploadLocal(String filename, MultipartFile file) throws MalformedURLException {

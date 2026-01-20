@@ -7,6 +7,9 @@ import com.maritel.trustay.dto.req.SharehouseUpdateReq;
 import com.maritel.trustay.dto.res.*;
 import com.maritel.trustay.service.SharehouseService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +20,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/trustay/sharehouses")
@@ -40,6 +46,27 @@ public class SharehouseController {
         String userEmail = principal.getName();
         SharehouseRes response = sharehouseService.registerSharehouse(userEmail, req);
 
+        return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, response));
+    }
+
+    @Operation(
+            summary = "쉐어하우스 매물 등록(이미지 여러장)",
+            description = "multipart/form-data로 매물 정보(req) + 이미지들(images[])를 업로드합니다. 이미지는 선택사항이며 여러 장 업로드 가능합니다.",
+            requestBody = @RequestBody(
+                    content = @Content(
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            schema = @Schema(implementation = SharehouseReq.class)
+                    )
+            )
+    )
+    @PostMapping(value = "/with-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DataResponse<SharehouseRes>> registerSharehouseWithImages(
+            Principal principal,
+            @Valid @RequestPart("req") SharehouseReq req,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+
+        String userEmail = principal.getName();
+        SharehouseRes response = sharehouseService.registerSharehouse(userEmail, req, images);
         return ResponseEntity.ok(DataResponse.of(ResponseCode.SUCCESS, response));
     }
 

@@ -14,11 +14,16 @@ import com.maritel.trustay.repository.MemberRepository;
 import com.maritel.trustay.repository.SharehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.net.MalformedURLException;
+import java.util.List;
 
 
 @Slf4j
@@ -29,12 +34,21 @@ public class SharehouseService {
 
     private final SharehouseRepository sharehouseRepository;
     private final MemberRepository memberRepository;
+    private final FileService fileService;
 
     /**
      * 쉐어하우스 등록
      */
     @Transactional
     public SharehouseRes registerSharehouse(String userEmail, SharehouseReq req) {
+        return registerSharehouse(userEmail, req, null);
+    }
+
+    /**
+     * 쉐어하우스 등록 (이미지 여러장 업로드 지원)
+     */
+    @Transactional
+    public SharehouseRes registerSharehouse(String userEmail, SharehouseReq req, List<MultipartFile> images) {
         // 1. 등록하려는 사용자 조회
         Member member = memberRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
@@ -53,6 +67,18 @@ public class SharehouseService {
             optionsString = String.join(",", req.getOptions());
         }
 
+        String imageUrlsString = null;
+        if (images != null && !images.isEmpty()) {
+            try {
+                List<String> uploadedUrls = fileService.uploadFiles(images);
+                if (!uploadedUrls.isEmpty()) {
+                    imageUrlsString = String.join(",", uploadedUrls);
+                }
+            } catch (MalformedURLException | BadRequestException e) {
+                throw new IllegalArgumentException("이미지 업로드에 실패했습니다.", e);
+            }
+        }
+
         // 3. 엔티티 생성
         Sharehouse sharehouse = Sharehouse.builder()
                 .host(member)
@@ -68,6 +94,7 @@ public class SharehouseService {
                 .bathroomCount(req.getBathroomCount())
                 .currentResidents(req.getCurrentResidents())
                 .options(optionsString)
+                .imageUrls(imageUrlsString)
                 .approvalStatus(ApprovalStatus.WAITING) // 기본값: 승인 대기
                 .build();
 

@@ -6,6 +6,10 @@ import com.maritel.trustay.entity.Sharehouse;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Getter
 @Builder
 public class SharehouseRes {
@@ -14,6 +18,7 @@ public class SharehouseRes {
     private String address;
     private HouseType houseType;
     private ApprovalStatus approvalStatus;
+    private List<String> imageUrls;
 
     public static SharehouseRes from(Sharehouse sharehouse) {
         return SharehouseRes.builder()
@@ -22,6 +27,15 @@ public class SharehouseRes {
                 .address(sharehouse.getAddress())
                 .houseType(sharehouse.getHouseType())
                 .approvalStatus(sharehouse.getApprovalStatus())
+                .imageUrls(parseImageUrls(sharehouse.getImageUrls()))
                 .build();
+    }
+
+    private static List<String> parseImageUrls(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
     }
 }

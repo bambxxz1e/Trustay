@@ -5,6 +5,10 @@ import com.maritel.trustay.constant.HouseType;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Getter
 @Builder
 public class SharehouseResultRes {
@@ -20,6 +24,7 @@ public class SharehouseResultRes {
     private String options;
     private Integer viewCount;
     private String hostName; // 집주인 이름 표시
+    private List<String> imageUrls;
 
     // Entity -> DTO 변환 메서드
     public static SharehouseResultRes from(Sharehouse sharehouse) {
@@ -36,6 +41,15 @@ public class SharehouseResultRes {
                 .options(sharehouse.getOptions())
                 .viewCount(sharehouse.getViewCount())
                 .hostName(sharehouse.getHost().getName())
+                .imageUrls(parseImageUrls(sharehouse.getImageUrls()))
                 .build();
+    }
+
+    private static List<String> parseImageUrls(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
     }
 }
